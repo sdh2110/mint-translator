@@ -131,4 +131,4 @@ dmypy.json
 # Project specific
 Inbox/*
 !Inbox/resources
-!Inbox/run.bat
+!Inbox/RunTranslator.bat
