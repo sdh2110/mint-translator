@@ -25,6 +25,8 @@ OTHER_INFO = 'Other Info'
 
 ERROR = '_ERROR'
 
+TRANSFER_CATEGORIES = []
+CATEGORY_IDX = dict()
 MONETARY_IDX = dict()
 
 
@@ -36,6 +38,11 @@ def load_mapping_index(index_filename, index_map):
 
 
 def load_resources():
+    global TRANSFER_CATEGORIES
+    with open('resources/transfer_categories.csv', newline='') as transfer_file:
+        TRANSFER_CATEGORIES = list(csv.reader(transfer_file, delimiter=','))[0]
+
+    load_mapping_index('categories.csv', CATEGORY_IDX)
     load_mapping_index('monetary_accounts.csv', MONETARY_IDX)
 
 
@@ -63,22 +70,33 @@ def error_out_transaction(transaction, error_message):
 def translate_from_mint(mint_transaction):
     transaction = dict()
 
+    # Set simple fields
+    transaction[DATE] = mint_transaction[MINT_DATE]
+    transaction[OTHER_INFO] = mint_transaction[MINT_NOTES]
+
+    # Set amount
     if mint_transaction[MINT_TRANSACTION_TYPE] == 'debit':
         transaction[AMOUNT] = '-' + mint_transaction[MINT_AMOUNT]
     else:
         transaction[AMOUNT] = mint_transaction[MINT_AMOUNT]
 
-    transaction[DATE] = mint_transaction[MINT_DATE]
-    transaction[FOR_OR_FROM] = mint_transaction[MINT_CATEGORY]
+    # Set for/from
+    if mint_transaction[MINT_CATEGORY] in TRANSFER_CATEGORIES:
+        transaction[FOR_OR_FROM] = mint_transaction[MINT_CATEGORY]
+    else:
+        if mint_transaction[MINT_CATEGORY] in CATEGORY_IDX:
+            transaction[FOR_OR_FROM] = CATEGORY_IDX[mint_transaction[MINT_CATEGORY]]
+        else:
+            transaction[FOR_OR_FROM] = mint_transaction[MINT_CATEGORY]
+            error_out_transaction(transaction, 'Unknown category of for/from')
 
+    # Set monetary method
     mint_account = unidecode.unidecode(mint_transaction[MINT_ACCOUNT])
     if mint_account in MONETARY_IDX:
         transaction[MONETARY_METHOD] = MONETARY_IDX[mint_account]
     else:
         transaction[MONETARY_METHOD] = mint_account
         error_out_transaction(transaction, 'Unknown monetary method')
-
-    transaction[OTHER_INFO] = mint_transaction[MINT_NOTES]
 
     return transaction
 
