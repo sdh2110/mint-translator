@@ -164,6 +164,7 @@ def combine_all_transfers(formatted_transactions):
         else:
             normalized_transactions.append(merge_two_transfers(next_transfer, matching_transfer))
 
+    normalized_transactions.sort(key=lambda transaction: transaction[ORIGINAL_INDEX])
     return normalized_transactions
 
 
