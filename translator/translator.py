@@ -15,8 +15,7 @@ MINT_LABELS = 'Labels'
 MINT_NOTES = 'Notes'
 
 EXPECTED_MINT_HEADERS = [MINT_DATE, MINT_DESC, MINT_ORG_DESC, MINT_AMOUNT, MINT_TRANSACTION_TYPE, MINT_CATEGORY,
-                         MINT_ACCOUNT,
-                         MINT_LABELS, MINT_NOTES]
+                         MINT_ACCOUNT, MINT_LABELS, MINT_NOTES]
 
 AMOUNT = 'Amount'
 DATE = 'Date'
@@ -24,8 +23,12 @@ FOR_OR_FROM = 'For/From'
 MONETARY_METHOD = 'Monetary Method'
 OTHER_INFO = 'Other Info'
 
+OUTPUT_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, OTHER_INFO]
+
 ERROR = '_ERROR'
 ORIGINAL_INDEX = '_INDEX'
+
+OUTPUT_HEADERS_WITH_ERROR = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, OTHER_INFO, ERROR, ORIGINAL_INDEX]
 
 TRANSFER_CATEGORIES = []
 CATEGORY_IDX = dict()
@@ -179,6 +182,13 @@ def sort_transactions(transactions, raw_transactions):
     return good_transactions, errored_transactions, raw_errored_transactions
 
 
+def export_transactions(transactions, headers, filename):
+    with open('../Inbox/{}'.format(filename), 'w', newline='') as output_file:
+        output_writer = csv.DictWriter(output_file, fieldnames=headers, extrasaction='ignore')
+        output_writer.writeheader()
+        output_writer.writerows(transactions)
+
+
 def main():
     load_resources()
 
@@ -196,9 +206,13 @@ def main():
     print('Processed {} transactions.'.format(processed_count))
     if transfers_processed > 0:
         print('{} transactions were merged into {} transfers'.format(transfers_processed * 2, transfers_processed))
+    export_transactions(good_transactions, OUTPUT_HEADERS, 'formatted_transactions.csv')
+
     if error_count > 0:
         print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(error_count))
         pprint.pprint(errored_transactions)
+        export_transactions(errored_transactions, OUTPUT_HEADERS_WITH_ERROR, 'formatted_translations(ERRORED).csv')
+        export_transactions(raw_errored_transactions, EXPECTED_MINT_HEADERS, 'transactions(ERRORED).csv')
 
 
 if __name__ == "__main__":
