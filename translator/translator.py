@@ -1,4 +1,5 @@
 import csv
+import pprint
 
 import unidecode
 
@@ -22,7 +23,7 @@ FOR_OR_FROM = 'For/From'
 MONETARY_METHOD = 'Monetary Method'
 OTHER_INFO = 'Other Info'
 
-ERROR = 'ERROR'
+ERROR = '_ERROR'
 
 MONETARY_IDX = dict()
 
@@ -86,13 +87,35 @@ def apply_mapping(mapping_function, list_of_data):
     return list(map(mapping_function, list_of_data))
 
 
+def sort_transactions(transactions, raw_transactions):
+    good_transactions = []
+    errored_transactions = []
+    raw_errored_transactions = []
+
+    for index, transaction in enumerate(transactions):
+        if ERROR not in transaction:
+            good_transactions.append(transaction)
+        else:
+            errored_transactions.append(transaction)
+            raw_errored_transactions.append(raw_transactions[index])
+
+    return good_transactions, errored_transactions, raw_errored_transactions
+
+
 def main():
     load_resources()
 
     raw_transactions = read_transactions()
     formatted_transactions = apply_mapping(translate_from_mint, raw_transactions)
 
-    print(formatted_transactions)
+    (good_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(formatted_transactions,
+                                                                                            raw_transactions)
+
+    print('Processed {} transactions.'.format(len(formatted_transactions)))
+    if len(errored_transactions) > 0:
+        print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(
+            len(errored_transactions)))
+        pprint.pprint(errored_transactions)
 
 
 if __name__ == "__main__":
