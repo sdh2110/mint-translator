@@ -55,7 +55,7 @@ def load_resources():
 
 
 def read_transactions():
-    with open('../Inbox/transactions.csv', newline='') as transactions_file:
+    with open('transactions.csv', newline='') as transactions_file:
         transactions_reader = csv.DictReader(transactions_file, delimiter=',')
         check_headers(transactions_reader)
         return list(transactions_reader)
@@ -184,7 +184,7 @@ def sort_transactions(transactions, raw_transactions):
 
 
 def export_transactions(transactions, headers, filename):
-    with open('../Inbox/{}'.format(filename), 'w', newline='') as output_file:
+    with open(filename, 'w', newline='') as output_file:
         output_writer = csv.DictWriter(output_file, fieldnames=headers, extrasaction='ignore')
         output_writer.writeheader()
         output_writer.writerows(transactions)
