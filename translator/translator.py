@@ -212,7 +212,7 @@ def main():
     if error_count > 0:
         print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(error_count))
         pprint.pprint(errored_transactions)
-        export_transactions(errored_transactions, OUTPUT_HEADERS_WITH_ERROR, 'formatted_translations(ERRORED).csv')
+        export_transactions(errored_transactions, OUTPUT_HEADERS_WITH_ERROR, 'formatted_transactions(ERRORED).csv')
         export_transactions(raw_errored_transactions, EXPECTED_MINT_HEADERS, 'transactions(ERRORED).csv')
 
 
