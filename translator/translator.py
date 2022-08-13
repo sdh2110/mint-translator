@@ -1,5 +1,7 @@
 import csv
 
+import unidecode
+
 MINT_DATE = 'Date'
 MINT_DESC = 'Description'
 MINT_ORG_DESC = 'Original Description'
@@ -17,12 +19,30 @@ EXPECTED_MINT_HEADERS = [MINT_DATE, MINT_DESC, MINT_ORG_DESC, MINT_AMOUNT, MINT_
 AMOUNT = 'Amount'
 DATE = 'Date'
 FOR_OR_FROM = 'For/From'
-METHOD = 'Monetary Method'
+MONETARY_METHOD = 'Monetary Method'
 OTHER_INFO = 'Other Info'
+
+ERROR = 'ERROR'
+
+MONETARY_IDX = dict()
+
+
+def load_mapping_index(index_filename, index_map):
+    with open('./resources/{}'.format(index_filename), newline='') as index_file:
+        index_reader = csv.reader(index_file, delimiter='>')
+        for mapping in index_reader:
+            index_map[mapping[0]] = mapping[1]
 
 
 def load_resources():
-    pass
+    load_mapping_index('monetary_accounts.csv', MONETARY_IDX)
+
+
+def read_transactions():
+    with open('../Inbox/transactions.csv', newline='') as transactions_file:
+        transactions_reader = csv.DictReader(transactions_file, delimiter=',')
+        check_headers(transactions_reader)
+        return list(transactions_reader)
 
 
 def check_headers(csv_reader):
@@ -30,6 +50,13 @@ def check_headers(csv_reader):
         error_message = 'CSV file headers do not match expected list of headers. Was:\n{}\nExpected:\n{}'.format(
             csv_reader.fieldnames, EXPECTED_MINT_HEADERS)
         raise Exception(error_message)
+
+
+def error_out_transaction(transaction, error_message):
+    if ERROR not in transaction:
+        transaction[ERROR] = error_message
+    else:
+        transaction[ERROR] += ' | ' + error_message
 
 
 def translate_from_mint(mint_transaction):
@@ -42,7 +69,14 @@ def translate_from_mint(mint_transaction):
 
     transaction[DATE] = mint_transaction[MINT_DATE]
     transaction[FOR_OR_FROM] = mint_transaction[MINT_CATEGORY]
-    transaction[METHOD] = mint_transaction[MINT_ACCOUNT]
+
+    mint_account = unidecode.unidecode(mint_transaction[MINT_ACCOUNT])
+    if mint_account in MONETARY_IDX:
+        transaction[MONETARY_METHOD] = MONETARY_IDX[mint_account]
+    else:
+        transaction[MONETARY_METHOD] = mint_account
+        error_out_transaction(transaction, 'Unknown monetary method')
+
     transaction[OTHER_INFO] = mint_transaction[MINT_NOTES]
 
     return transaction
@@ -53,15 +87,12 @@ def apply_mapping(mapping_function, list_of_data):
 
 
 def main():
-    with open('../Inbox/transactions.csv', newline='') as transactions_file:
-        load_resources()
-        transactions_reader = csv.DictReader(transactions_file, delimiter=',')
-        check_headers(transactions_reader)
+    load_resources()
 
-        raw_transactions = list(transactions_reader)
-        formatted_transactions = apply_mapping(translate_from_mint, raw_transactions)
+    raw_transactions = read_transactions()
+    formatted_transactions = apply_mapping(translate_from_mint, raw_transactions)
 
-        print(formatted_transactions)
+    print(formatted_transactions)
 
 
 if __name__ == "__main__":
