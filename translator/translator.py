@@ -107,6 +107,54 @@ def translate_all_from_mint(raw_transactions):
     return [translate_from_mint(raw_transaction, index) for index, raw_transaction in enumerate(raw_transactions)]
 
 
+def are_two_transfers_paired(transfer1, transfer2):
+    return float(transfer1[AMOUNT]) + float(transfer2[AMOUNT]) == 0
+
+
+def merge_two_transfers(transfer1, transfer2):
+    if float(transfer1[AMOUNT]) < 0:
+        primary, secondary = transfer1, transfer2
+    else:
+        primary, secondary = transfer2, transfer1
+
+    primary[FOR_OR_FROM] = secondary[MONETARY_METHOD]
+
+    if ERROR in secondary:
+        error_out_transaction(primary, '[From merged transaction (index={}): {}]'.format(secondary[ORIGINAL_INDEX],
+                                                                                         secondary[ERROR]))
+
+    return primary
+
+
+def combine_all_transfers(formatted_transactions):
+    normalized_transactions = []
+    transfers = []
+
+    for transaction in formatted_transactions:
+        if transaction[FOR_OR_FROM] in TRANSFER_CATEGORIES:
+            transfers.append(transaction)
+        else:
+            normalized_transactions.append(transaction)
+
+    while len(transfers) > 0:
+        next_transfer = transfers.pop()
+        matching_transfer = None
+
+        for index, other_transfer in enumerate(transfers):
+            if are_two_transfers_paired(next_transfer, other_transfer):
+                transfers.pop(index)
+                matching_transfer = other_transfer
+                break
+
+        if matching_transfer is None:
+            error_out_transaction(next_transfer, 'No matching transfer found')
+            normalized_transactions.append(next_transfer)
+        else:
+            normalized_transactions.append(merge_two_transfers(next_transfer, matching_transfer))
+
+    return normalized_transactions
+
+
 def sort_transactions(transactions, raw_transactions):
     good_transactions = []
     errored_transactions = []
@@ -127,14 +175,20 @@ def main():
 
     raw_transactions = read_transactions()
     formatted_transactions = translate_all_from_mint(raw_transactions)
+    transactions_with_transfers = combine_all_transfers(formatted_transactions)
 
-    (good_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(formatted_transactions,
+    (good_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(transactions_with_transfers,
                                                                                             raw_transactions)
 
-    print('Processed {} transactions.'.format(len(formatted_transactions)))
-    if len(errored_transactions) > 0:
-        print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(
-            len(errored_transactions)))
+    processed_count = len(raw_transactions)
+    error_count = len(errored_transactions)
+    transfers_processed = processed_count - error_count - len(good_transactions)
+
+    print('Processed {} transactions.'.format(processed_count))
+    if transfers_processed > 0:
+        print('{} transactions were merged into {} transfers'.format(transfers_processed, transfers_processed / 2))
+    if error_count > 0:
+        print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(error_count))
         pprint.pprint(errored_transactions)
 
 
