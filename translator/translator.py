@@ -1,5 +1,6 @@
 import csv
 import pprint
+from datetime import datetime
 
 import unidecode
 
@@ -29,6 +30,9 @@ ORIGINAL_INDEX = '_INDEX'
 TRANSFER_CATEGORIES = []
 CATEGORY_IDX = dict()
 MONETARY_IDX = dict()
+
+DATE_FORMAT = '%m/%d/%Y'
+TRANSFER_RANGE = 1  # Transfers can only be merged if they are within 1 day of each other
 
 
 def load_mapping_index(index_filename, index_map):
@@ -108,7 +112,12 @@ def translate_all_from_mint(raw_transactions):
 
 
 def are_two_transfers_paired(transfer1, transfer2):
-    return float(transfer1[AMOUNT]) + float(transfer2[AMOUNT]) == 0
+    if float(transfer1[AMOUNT]) + float(transfer2[AMOUNT]) == 0:
+        date1 = datetime.strptime(transfer1[DATE], DATE_FORMAT)
+        date2 = datetime.strptime(transfer2[DATE], DATE_FORMAT)
+        return abs((date2 - date1).days) <= TRANSFER_RANGE
+    else:
+        return False
 
 
 def merge_two_transfers(transfer1, transfer2):
@@ -186,7 +195,7 @@ def main():
 
     print('Processed {} transactions.'.format(processed_count))
     if transfers_processed > 0:
-        print('{} transactions were merged into {} transfers'.format(transfers_processed, transfers_processed / 2))
+        print('{} transactions were merged into {} transfers'.format(transfers_processed * 2, transfers_processed))
     if error_count > 0:
         print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(error_count))
         pprint.pprint(errored_transactions)
