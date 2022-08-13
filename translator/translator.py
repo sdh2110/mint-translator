@@ -1,5 +1,6 @@
 import csv
 import pprint
+import sys
 from datetime import datetime
 
 import unidecode
@@ -214,6 +215,9 @@ def main():
         pprint.pprint(errored_transactions)
         export_transactions(errored_transactions, OUTPUT_HEADERS_WITH_ERROR, 'formatted_transactions(ERRORED).csv')
         export_transactions(raw_errored_transactions, EXPECTED_MINT_HEADERS, 'transactions(ERRORED).csv')
+        
+        print()
+        sys.exit('Errors were found in {} transactions'.format(error_count))
 
 
 if __name__ == "__main__":

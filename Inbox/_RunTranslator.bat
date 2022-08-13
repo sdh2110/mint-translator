@@ -1,2 +1,4 @@
 python ../translator/translator.py
-PAUSE
+IF %ERRORLEVEL% NEQ 0 (
+    PAUSE
+)
