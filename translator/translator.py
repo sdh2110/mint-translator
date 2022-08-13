@@ -1,19 +1,27 @@
 import csv
 
-EXPECTED_HEADERS = []
+MINT_DATE = 'Date'
+MINT_DESC = 'Description'
+MINT_ORG_DESC = 'Original Description'
+MINT_AMOUNT = 'Amount'
+MINT_TRANS_TYPE = 'Transaction Type'
+MINT_CATEGORY = 'Category'
+MINT_ACCOUNT = 'Account Name'
+MINT_LABELS = 'Labels'
+MINT_NOTES = 'Notes'
+
+EXPECTED_MINT_HEADERS = [MINT_DATE, MINT_DESC, MINT_ORG_DESC, MINT_AMOUNT, MINT_TRANS_TYPE, MINT_CATEGORY, MINT_ACCOUNT,
+                         MINT_LABELS, MINT_NOTES]
 
 
 def load_resources():
-    with open('resources/expected_headers.csv', newline='') as headers_file:
-        global EXPECTED_HEADERS
-        headers_reader = csv.DictReader(headers_file, delimiter=',')
-        EXPECTED_HEADERS = headers_reader.fieldnames
+    pass
 
 
 def check_headers(csv_reader):
-    if csv_reader.fieldnames != EXPECTED_HEADERS:
+    if csv_reader.fieldnames != EXPECTED_MINT_HEADERS:
         error_message = 'CSV file headers do not match expected list of headers. Was:\n{}\nExpected:\n{}'.format(
-            csv_reader.fieldnames, EXPECTED_HEADERS)
+            csv_reader.fieldnames, EXPECTED_MINT_HEADERS)
         raise Exception(error_message)
 
 
