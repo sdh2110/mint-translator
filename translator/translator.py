@@ -40,7 +40,7 @@ TRANSFER_RANGE = 1  # Transfers can only be merged if they are within 1 day of e
 
 def load_mapping_index(index_filename, index_map):
     with open('./resources/{}'.format(index_filename), newline='') as index_file:
-        index_reader = csv.reader(index_file, delimiter='>')
+        index_reader = csv.reader(index_file, delimiter=',')
         for mapping in index_reader:
             index_map[mapping[0]] = mapping[1]
 
