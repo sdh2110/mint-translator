@@ -24,6 +24,7 @@ MONETARY_METHOD = 'Monetary Method'
 OTHER_INFO = 'Other Info'
 
 ERROR = '_ERROR'
+ORIGINAL_INDEX = '_INDEX'
 
 TRANSFER_CATEGORIES = []
 CATEGORY_IDX = dict()
@@ -67,12 +68,13 @@ def error_out_transaction(transaction, error_message):
         transaction[ERROR] += ' | ' + error_message
 
 
-def translate_from_mint(mint_transaction):
+def translate_from_mint(mint_transaction, index):
     transaction = dict()
 
     # Set simple fields
     transaction[DATE] = mint_transaction[MINT_DATE]
     transaction[OTHER_INFO] = mint_transaction[MINT_NOTES]
+    transaction[ORIGINAL_INDEX] = index
 
     # Set amount
     if mint_transaction[MINT_TRANSACTION_TYPE] == 'debit':
@@ -101,8 +103,8 @@ def translate_from_mint(mint_transaction):
     return transaction
 
 
-def apply_mapping(mapping_function, list_of_data):
-    return list(map(mapping_function, list_of_data))
+def translate_all_from_mint(raw_transactions):
+    return [translate_from_mint(raw_transaction, index) for index, raw_transaction in enumerate(raw_transactions)]
 
 
 def sort_transactions(transactions, raw_transactions):
@@ -110,12 +112,12 @@ def sort_transactions(transactions, raw_transactions):
     errored_transactions = []
     raw_errored_transactions = []
 
-    for index, transaction in enumerate(transactions):
+    for transaction in transactions:
         if ERROR not in transaction:
             good_transactions.append(transaction)
         else:
             errored_transactions.append(transaction)
-            raw_errored_transactions.append(raw_transactions[index])
+            raw_errored_transactions.append(raw_transactions[transaction[ORIGINAL_INDEX]])
 
     return good_transactions, errored_transactions, raw_errored_transactions
 
@@ -124,7 +126,7 @@ def main():
     load_resources()
 
     raw_transactions = read_transactions()
-    formatted_transactions = apply_mapping(translate_from_mint, raw_transactions)
+    formatted_transactions = translate_all_from_mint(raw_transactions)
 
     (good_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(formatted_transactions,
                                                                                             raw_transactions)
