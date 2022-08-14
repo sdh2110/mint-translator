@@ -125,6 +125,13 @@ def translate_from_mint(mint_transaction, index):
         transaction[MONETARY_METHOD] = mint_account
         error_out_transaction(transaction, 'Unknown monetary method')
 
+    # Add notes if from Venmo
+    if transaction[MONETARY_METHOD] == 'Venmo':
+        if transaction[OTHER_INFO] == '':
+            transaction[OTHER_INFO] = mint_transaction[MINT_DESC]
+        else:
+            transaction[OTHER_INFO] += ' - ' + mint_transaction[MINT_DESC]
+
     return transaction
 
 
