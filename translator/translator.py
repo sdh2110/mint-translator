@@ -39,9 +39,10 @@ INVERTED_CATEGORIES = []
 BONUS_CATEGORIES = []
 CATEGORY_IDX = dict()
 MONETARY_IDX = dict()
+DROP_PATTERNS = []
 WARNING_PATTERNS = []
 
-WARNING_PATTERN_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, OTHER_INFO, ERROR]
+PATTERN_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, OTHER_INFO, ERROR]
 
 DATE_FORMAT = '%m/%d/%Y'
 TRANSFER_RANGE = None  # Transfers can only be merged if they are within this amount
@@ -59,6 +60,11 @@ def load_mapping_index(index_filename, index_map):
             index_map[mapping[0]] = mapping[1]
 
 
+def load_patterns(patterns_filename, patterns_list):
+    with open('resources/{}'.format(patterns_filename), newline='') as patterns_file:
+        patterns_list.extend(list(csv.DictReader(patterns_file, delimiter=',')))
+
+
 def load_resources():
     load_single_line_csv_list('transfer_categories.csv', TRANSFER_CATEGORIES)
     load_single_line_csv_list('inverted_categories.csv', INVERTED_CATEGORIES)
@@ -67,14 +73,13 @@ def load_resources():
     load_mapping_index('categories.csv', CATEGORY_IDX)
     load_mapping_index('monetary_accounts.csv', MONETARY_IDX)
 
+    load_patterns('drop_patterns.csv', DROP_PATTERNS)
+    load_patterns('warning_patterns.csv', WARNING_PATTERNS)
+
     settings = dict()
     load_mapping_index('settings.csv', settings)
     global TRANSFER_RANGE
     TRANSFER_RANGE = int(settings['transfer range'])
-
-    global WARNING_PATTERNS
-    with open('resources/warning_patterns.csv', newline='') as warnings_file:
-        WARNING_PATTERNS = list(csv.DictReader(warnings_file, delimiter=','))
 
 
 def read_transactions():
@@ -223,12 +228,12 @@ def split_bonuses(transactions):
     return transactions_with_bonuses
 
 
-def is_errored_transaction_only_warning(errored_transaction):
-    for warning_pattern in WARNING_PATTERNS:
+def does_transaction_match_pattern(transaction, patterns):
+    for pattern in patterns:
         still_matches_pattern = True
 
-        for header in WARNING_PATTERN_HEADERS:
-            if warning_pattern[header] != '' and errored_transaction[header] != warning_pattern[header]:
+        for header in PATTERN_HEADERS:
+            if pattern[header] != '' and transaction[header] != pattern[header]:
                 still_matches_pattern = False
                 break
 
@@ -240,22 +245,25 @@ def is_errored_transaction_only_warning(errored_transaction):
 
 def sort_transactions(transactions, raw_transactions):
     good_transactions = []
+    dropped_transactions = []
     warning_transactions = []
     errored_transactions = []
     raw_errored_transactions = []
 
     for transaction in transactions:
-        if ERROR not in transaction:
+        if does_transaction_match_pattern(transaction, DROP_PATTERNS):
+            dropped_transactions.append(transaction)
+        elif ERROR not in transaction:
             good_transactions.append(transaction)
         else:
-            if is_errored_transaction_only_warning(transaction):
+            if does_transaction_match_pattern(transaction, WARNING_PATTERNS):
                 good_transactions.append(transaction)
                 warning_transactions.append(transaction)
             else:
                 errored_transactions.append(transaction)
                 raw_errored_transactions.append(raw_transactions[transaction[ORIGINAL_INDEX]])
 
-    return good_transactions, warning_transactions, errored_transactions, raw_errored_transactions
+    return good_transactions, dropped_transactions, warning_transactions, errored_transactions, raw_errored_transactions
 
 
 def export_transactions(transactions, headers, filename, output_enabled, include_headers=True):
@@ -277,17 +285,23 @@ def main(force_output):
     invert_amounts_for_specific_categories(transactions_with_transfers)
     transactions_with_bonuses = split_bonuses(transactions_with_transfers)
 
-    (good_transactions, warning_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(
+    (good_transactions, dropped_transactions, warning_transactions, errored_transactions,
+     raw_errored_transactions) = sort_transactions(
         transactions_with_bonuses,
         raw_transactions)
 
     processed_count = len(raw_transactions)
+    dropped_count = len(dropped_transactions)
     warning_count = len(warning_transactions)
     error_count = len(errored_transactions)
     output_enabled = force_output or error_count == 0
 
     print('Processed {} transactions.'.format(processed_count))
     export_transactions(good_transactions, OUTPUT_HEADERS, 'formatted_transactions.csv', output_enabled, False)
+
+    if dropped_count > 0:
+        print('\nNotice: There were {} transactions dropped:\n'.format(dropped_count))
+        print_table(dropped_transactions, ERROR_PRINT_HEADERS, RIGHT_ALIGNED_HEADERS)
 
     if warning_count > 0:
         print('\nWARNING: {} of the transactions contained warnings:\n'.format(warning_count))
@@ -301,7 +315,7 @@ def main(force_output):
         export_transactions(raw_errored_transactions, EXPECTED_MINT_HEADERS, 'transactions(ERRORED).csv',
                             output_enabled)
 
-    if warning_count + error_count > 0:
+    if dropped_count + warning_count + error_count > 0:
         print()
         sys.exit(
             'Errors were found in {} transactions and warnings were found in {}'.format(error_count, warning_count))
