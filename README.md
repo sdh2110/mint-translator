@@ -49,5 +49,6 @@ items. This is what each file is for:
   gaining the bonus and one for it being credited to somewhere else.
 - `warning_patterns.csv` - Lists transactions in my format that are partially filled in. If an error matches each of the
   fields that are supplied on one of these patterns, then that error can be reduced to a warning.
+- `settings` - Some misc settings. The name of each setting is on the left and the value is on the right.
 
 These resources are intended to be updated as more conversions are found or arise.

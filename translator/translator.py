@@ -44,7 +44,7 @@ WARNING_PATTERNS = []
 WARNING_PATTERN_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, OTHER_INFO, ERROR]
 
 DATE_FORMAT = '%m/%d/%Y'
-TRANSFER_RANGE = 1  # Transfers can only be merged if they are within 1 day of each other
+TRANSFER_RANGE = None  # Transfers can only be merged if they are within this amount
 
 
 def load_single_line_csv_list(filename, list_to_load):
@@ -66,6 +66,11 @@ def load_resources():
 
     load_mapping_index('categories.csv', CATEGORY_IDX)
     load_mapping_index('monetary_accounts.csv', MONETARY_IDX)
+
+    settings = dict()
+    load_mapping_index('settings.csv', settings)
+    global TRANSFER_RANGE
+    TRANSFER_RANGE = int(settings['transfer range'])
 
     global WARNING_PATTERNS
     with open('resources/warning_patterns.csv', newline='') as warnings_file:
