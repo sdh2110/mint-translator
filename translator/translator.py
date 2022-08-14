@@ -184,14 +184,15 @@ def sort_transactions(transactions, raw_transactions):
     return good_transactions, errored_transactions, raw_errored_transactions
 
 
-def export_transactions(transactions, headers, filename):
-    with open(filename, 'w', newline='') as output_file:
-        output_writer = csv.DictWriter(output_file, fieldnames=headers, extrasaction='ignore')
-        output_writer.writeheader()
-        output_writer.writerows(transactions)
+def export_transactions(transactions, headers, filename, output_enabled):
+    if output_enabled:
+        with open(filename, 'w', newline='') as output_file:
+            output_writer = csv.DictWriter(output_file, fieldnames=headers, extrasaction='ignore')
+            output_writer.writeheader()
+            output_writer.writerows(transactions)
 
 
-def main():
+def main(force_output):
     load_resources()
 
     raw_transactions = read_transactions()
@@ -204,21 +205,24 @@ def main():
     processed_count = len(raw_transactions)
     error_count = len(errored_transactions)
     transfers_processed = processed_count - error_count - len(good_transactions)
+    output_enabled = force_output or error_count == 0
 
     print('Processed {} transactions.'.format(processed_count))
     if transfers_processed > 0:
         print('{} transactions were merged into {} transfers'.format(transfers_processed * 2, transfers_processed))
-    export_transactions(good_transactions, OUTPUT_HEADERS, 'formatted_transactions.csv')
+    export_transactions(good_transactions, OUTPUT_HEADERS, 'formatted_transactions.csv', output_enabled)
 
     if error_count > 0:
         print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(error_count))
         pprint.pprint(errored_transactions)
-        export_transactions(errored_transactions, OUTPUT_HEADERS_WITH_ERROR, 'formatted_transactions(ERRORED).csv')
-        export_transactions(raw_errored_transactions, EXPECTED_MINT_HEADERS, 'transactions(ERRORED).csv')
-        
+        export_transactions(errored_transactions, OUTPUT_HEADERS_WITH_ERROR, 'formatted_transactions(ERRORED).csv',
+                            output_enabled)
+        export_transactions(raw_errored_transactions, EXPECTED_MINT_HEADERS, 'transactions(ERRORED).csv',
+                            output_enabled)
+
         print()
         sys.exit('Errors were found in {} transactions'.format(error_count))
 
 
 if __name__ == "__main__":
-    main()
+    main('force' in sys.argv)
