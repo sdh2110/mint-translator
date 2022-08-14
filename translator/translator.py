@@ -1,9 +1,10 @@
 import csv
-import pprint
 import sys
 from datetime import datetime
 
 import unidecode
+
+from dict_table import print_table
 
 MINT_DATE = 'Date'
 MINT_DESC = 'Description'
@@ -30,6 +31,8 @@ ERROR = '_ERROR'
 ORIGINAL_INDEX = '_INDEX'
 
 OUTPUT_HEADERS_WITH_ERROR = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, OTHER_INFO, ERROR, ORIGINAL_INDEX]
+ERROR_PRINT_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, ERROR, ORIGINAL_INDEX]
+RIGHT_ALIGNED_HEADERS = [AMOUNT, ORIGINAL_INDEX]
 
 TRANSFER_CATEGORIES = []
 CATEGORY_IDX = dict()
@@ -214,7 +217,7 @@ def main(force_output):
 
     if error_count > 0:
         print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(error_count))
-        pprint.pprint(errored_transactions)
+        print_table(errored_transactions, ERROR_PRINT_HEADERS, RIGHT_ALIGNED_HEADERS)
         export_transactions(errored_transactions, OUTPUT_HEADERS_WITH_ERROR, 'formatted_transactions(ERRORED).csv',
                             output_enabled)
         export_transactions(raw_errored_transactions, EXPECTED_MINT_HEADERS, 'transactions(ERRORED).csv',
