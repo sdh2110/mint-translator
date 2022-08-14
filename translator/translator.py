@@ -246,11 +246,13 @@ def sort_transactions(transactions, raw_transactions):
     return good_transactions, warning_transactions, errored_transactions, raw_errored_transactions
 
 
-def export_transactions(transactions, headers, filename, output_enabled):
+def export_transactions(transactions, headers, filename, output_enabled, include_headers=True):
     if output_enabled:
         with open(filename, 'w', newline='') as output_file:
             output_writer = csv.DictWriter(output_file, fieldnames=headers, extrasaction='ignore')
-            output_writer.writeheader()
+            if include_headers:
+                output_writer.writeheader()
+
             output_writer.writerows(transactions)
 
 
@@ -273,7 +275,7 @@ def main(force_output):
     output_enabled = force_output or error_count == 0
 
     print('Processed {} transactions.'.format(processed_count))
-    export_transactions(good_transactions, OUTPUT_HEADERS, 'formatted_transactions.csv', output_enabled)
+    export_transactions(good_transactions, OUTPUT_HEADERS, 'formatted_transactions.csv', output_enabled, False)
 
     if warning_count > 0:
         print('\nWARNING: {} of the transactions contained warnings:\n'.format(warning_count))

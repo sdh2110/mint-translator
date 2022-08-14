@@ -14,11 +14,12 @@ To use:
 - Export `transactions.csv` from Mint and place in `/Inbox` folder.
 - Click on the `_RunTranslator.bat` script to run the translator.
 - The script will output the following:
-  - If everything is successfully translated, the translations will be placed in a `formatted_transactions.csv` file.
-  - However, if there were any errored transactions found, then those transactions will be displayed in the console along
-    with their errors and no transactions will be exported.
-  - If any errors were only of "warning" level, these will still be displayed in the console but will not prevent the
-    `formatted_transactions.csv` file from exporting.
+    - If everything is successfully translated, the translations will be placed in a `formatted_transactions.csv` file.
+      Additionally, the contents of this file will be copied to the clipboard.
+    - However, if there were any errored transactions found, then those transactions will be displayed in the console
+      along with their errors and no transactions will be exported.
+    - If any errors were only of "warning" level, these will still be displayed in the console but will not prevent the
+      `formatted_transactions.csv` file from exporting.
 
 ### Other Run Commands
 
