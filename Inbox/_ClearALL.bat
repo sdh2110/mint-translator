@@ -1,2 +1,2 @@
-CALL _ClearOutput.bat
+CALL _ClearOutputOnly.bat
 DEL transactions.csv
