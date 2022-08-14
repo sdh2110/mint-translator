@@ -35,6 +35,7 @@ ERROR_PRINT_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, ERROR, ORIGIN
 RIGHT_ALIGNED_HEADERS = [AMOUNT, ORIGINAL_INDEX]
 
 TRANSFER_CATEGORIES = []
+INVERTED_CATEGORIES = []
 BONUS_CATEGORIES = []
 CATEGORY_IDX = dict()
 MONETARY_IDX = dict()
@@ -60,6 +61,7 @@ def load_mapping_index(index_filename, index_map):
 
 def load_resources():
     load_single_line_csv_list('transfer_categories.csv', TRANSFER_CATEGORIES)
+    load_single_line_csv_list('inverted_categories.csv', INVERTED_CATEGORIES)
     load_single_line_csv_list('bonus_categories.csv', BONUS_CATEGORIES)
 
     load_mapping_index('categories.csv', CATEGORY_IDX)
@@ -188,13 +190,19 @@ def invert_amount_for(transaction):
     transaction[AMOUNT] = str(0 - float(transaction[AMOUNT]))
 
 
+def invert_amounts_for_specific_categories(transactions):
+    for transaction in transactions:
+        if transaction[FOR_OR_FROM] in INVERTED_CATEGORIES:
+            invert_amount_for(transaction)
+
+
 def split_bonuses(transactions):
     transactions_with_bonuses = []
 
     for transaction in transactions:
         if transaction[FOR_OR_FROM] in BONUS_CATEGORIES:
             bonus = transaction.copy()
-            bonus[FOR_OR_FROM] = 'bonus'
+            bonus[FOR_OR_FROM] = 'bonus - {}'.format(bonus[FOR_OR_FROM])
             invert_amount_for(bonus)
             transactions_with_bonuses.append(bonus)
 
@@ -252,6 +260,7 @@ def main(force_output):
     raw_transactions = read_transactions()
     formatted_transactions = translate_all_from_mint(raw_transactions)
     transactions_with_transfers = combine_all_transfers(formatted_transactions)
+    invert_amounts_for_specific_categories(transactions_with_transfers)
     transactions_with_bonuses = split_bonuses(transactions_with_transfers)
 
     (good_transactions, warning_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(
