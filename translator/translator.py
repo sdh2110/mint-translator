@@ -35,6 +35,7 @@ ERROR_PRINT_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, ERROR, ORIGIN
 RIGHT_ALIGNED_HEADERS = [AMOUNT, ORIGINAL_INDEX]
 
 TRANSFER_CATEGORIES = []
+BONUS_CATEGORIES = []
 CATEGORY_IDX = dict()
 MONETARY_IDX = dict()
 WARNING_PATTERNS = []
@@ -45,6 +46,11 @@ DATE_FORMAT = '%m/%d/%Y'
 TRANSFER_RANGE = 1  # Transfers can only be merged if they are within 1 day of each other
 
 
+def load_single_line_csv_list(filename, list_to_load):
+    with open('resources/{}'.format(filename), newline='') as list_file:
+        list_to_load.extend(list(csv.reader(list_file, delimiter=','))[0])
+
+
 def load_mapping_index(index_filename, index_map):
     with open('./resources/{}'.format(index_filename), newline='') as index_file:
         index_reader = csv.reader(index_file, delimiter=',')
@@ -53,16 +59,15 @@ def load_mapping_index(index_filename, index_map):
 
 
 def load_resources():
-    global TRANSFER_CATEGORIES
-    with open('resources/transfer_categories.csv', newline='') as transfer_file:
-        TRANSFER_CATEGORIES = list(csv.reader(transfer_file, delimiter=','))[0]
+    load_single_line_csv_list('transfer_categories.csv', TRANSFER_CATEGORIES)
+    load_single_line_csv_list('bonus_categories.csv', BONUS_CATEGORIES)
+
+    load_mapping_index('categories.csv', CATEGORY_IDX)
+    load_mapping_index('monetary_accounts.csv', MONETARY_IDX)
 
     global WARNING_PATTERNS
     with open('resources/warning_patterns.csv', newline='') as warnings_file:
         WARNING_PATTERNS = list(csv.DictReader(warnings_file, delimiter=','))
-
-    load_mapping_index('categories.csv', CATEGORY_IDX)
-    load_mapping_index('monetary_accounts.csv', MONETARY_IDX)
 
 
 def read_transactions():
@@ -179,6 +184,25 @@ def combine_all_transfers(formatted_transactions):
     return normalized_transactions
 
 
+def invert_amount_for(transaction):
+    transaction[AMOUNT] = str(0 - float(transaction[AMOUNT]))
+
+
+def split_bonuses(transactions):
+    transactions_with_bonuses = []
+
+    for transaction in transactions:
+        if transaction[FOR_OR_FROM] in BONUS_CATEGORIES:
+            bonus = transaction.copy()
+            bonus[FOR_OR_FROM] = 'bonus'
+            invert_amount_for(bonus)
+            transactions_with_bonuses.append(bonus)
+
+        transactions_with_bonuses.append(transaction)
+
+    return transactions_with_bonuses
+
+
 def is_errored_transaction_only_warning(errored_transaction):
     for warning_pattern in WARNING_PATTERNS:
         still_matches_pattern = True
@@ -228,20 +252,18 @@ def main(force_output):
     raw_transactions = read_transactions()
     formatted_transactions = translate_all_from_mint(raw_transactions)
     transactions_with_transfers = combine_all_transfers(formatted_transactions)
+    transactions_with_bonuses = split_bonuses(transactions_with_transfers)
 
     (good_transactions, warning_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(
-        transactions_with_transfers,
+        transactions_with_bonuses,
         raw_transactions)
 
     processed_count = len(raw_transactions)
     warning_count = len(warning_transactions)
     error_count = len(errored_transactions)
-    transfers_processed = processed_count - error_count - len(good_transactions)
     output_enabled = force_output or error_count == 0
 
     print('Processed {} transactions.'.format(processed_count))
-    if transfers_processed > 0:
-        print('{} transactions were merged into {} transfers'.format(transfers_processed * 2, transfers_processed))
     export_transactions(good_transactions, OUTPUT_HEADERS, 'formatted_transactions.csv', output_enabled)
 
     if warning_count > 0:
