@@ -37,6 +37,9 @@ RIGHT_ALIGNED_HEADERS = [AMOUNT, ORIGINAL_INDEX]
 TRANSFER_CATEGORIES = []
 CATEGORY_IDX = dict()
 MONETARY_IDX = dict()
+WARNING_PATTERNS = []
+
+WARNING_PATTERN_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, OTHER_INFO, ERROR]
 
 DATE_FORMAT = '%m/%d/%Y'
 TRANSFER_RANGE = 1  # Transfers can only be merged if they are within 1 day of each other
@@ -53,6 +56,10 @@ def load_resources():
     global TRANSFER_CATEGORIES
     with open('resources/transfer_categories.csv', newline='') as transfer_file:
         TRANSFER_CATEGORIES = list(csv.reader(transfer_file, delimiter=','))[0]
+
+    global WARNING_PATTERNS
+    with open('resources/warning_patterns.csv', newline='') as warnings_file:
+        WARNING_PATTERNS = list(csv.DictReader(warnings_file, delimiter=','))
 
     load_mapping_index('categories.csv', CATEGORY_IDX)
     load_mapping_index('monetary_accounts.csv', MONETARY_IDX)
@@ -172,8 +179,24 @@ def combine_all_transfers(formatted_transactions):
     return normalized_transactions
 
 
+def is_errored_transaction_only_warning(errored_transaction):
+    for warning_pattern in WARNING_PATTERNS:
+        still_matches_pattern = True
+
+        for header in WARNING_PATTERN_HEADERS:
+            if warning_pattern[header] != '' and errored_transaction[header] != warning_pattern[header]:
+                still_matches_pattern = False
+                break
+
+        if still_matches_pattern:
+            return True
+
+    return False
+
+
 def sort_transactions(transactions, raw_transactions):
     good_transactions = []
+    warning_transactions = []
     errored_transactions = []
     raw_errored_transactions = []
 
@@ -181,10 +204,14 @@ def sort_transactions(transactions, raw_transactions):
         if ERROR not in transaction:
             good_transactions.append(transaction)
         else:
-            errored_transactions.append(transaction)
-            raw_errored_transactions.append(raw_transactions[transaction[ORIGINAL_INDEX]])
+            if is_errored_transaction_only_warning(transaction):
+                good_transactions.append(transaction)
+                warning_transactions.append(transaction)
+            else:
+                errored_transactions.append(transaction)
+                raw_errored_transactions.append(raw_transactions[transaction[ORIGINAL_INDEX]])
 
-    return good_transactions, errored_transactions, raw_errored_transactions
+    return good_transactions, warning_transactions, errored_transactions, raw_errored_transactions
 
 
 def export_transactions(transactions, headers, filename, output_enabled):
@@ -202,10 +229,12 @@ def main(force_output):
     formatted_transactions = translate_all_from_mint(raw_transactions)
     transactions_with_transfers = combine_all_transfers(formatted_transactions)
 
-    (good_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(transactions_with_transfers,
-                                                                                            raw_transactions)
+    (good_transactions, warning_transactions, errored_transactions, raw_errored_transactions) = sort_transactions(
+        transactions_with_transfers,
+        raw_transactions)
 
     processed_count = len(raw_transactions)
+    warning_count = len(warning_transactions)
     error_count = len(errored_transactions)
     transfers_processed = processed_count - error_count - len(good_transactions)
     output_enabled = force_output or error_count == 0
@@ -215,16 +244,22 @@ def main(force_output):
         print('{} transactions were merged into {} transfers'.format(transfers_processed * 2, transfers_processed))
     export_transactions(good_transactions, OUTPUT_HEADERS, 'formatted_transactions.csv', output_enabled)
 
+    if warning_count > 0:
+        print('\nWARNING: {} of the transactions contained warnings:\n'.format(warning_count))
+        print_table(warning_transactions, ERROR_PRINT_HEADERS, RIGHT_ALIGNED_HEADERS)
+
     if error_count > 0:
-        print('\nWARNING: {} of the transactions contained errors. Errored transactions:\n'.format(error_count))
+        print('\nERROR: {} of the transactions contained errors. Errored transactions:\n'.format(error_count))
         print_table(errored_transactions, ERROR_PRINT_HEADERS, RIGHT_ALIGNED_HEADERS)
         export_transactions(errored_transactions, OUTPUT_HEADERS_WITH_ERROR, 'formatted_transactions(ERRORED).csv',
                             output_enabled)
         export_transactions(raw_errored_transactions, EXPECTED_MINT_HEADERS, 'transactions(ERRORED).csv',
                             output_enabled)
 
+    if warning_count + error_count > 0:
         print()
-        sys.exit('Errors were found in {} transactions'.format(error_count))
+        sys.exit(
+            'Errors were found in {} transactions and warnings were found in {}'.format(error_count, warning_count))
 
 
 if __name__ == "__main__":

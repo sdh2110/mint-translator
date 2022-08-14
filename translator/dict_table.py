@@ -26,7 +26,6 @@ def print_table(items, headers, right_aligned_headers):
         _print_cell(header, column_widths[header], False)
 
     print()
-    print()
 
     for item in items:
         for header in headers:
