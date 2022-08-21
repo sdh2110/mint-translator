@@ -1,5 +1,5 @@
 @ECHO OFF
-MODE 150, 30
+MODE CON: cols=150, lines=30
 
 python ../translator/translator.py force
 set save_error=%ERRORLEVEL%
