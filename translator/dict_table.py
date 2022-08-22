@@ -4,7 +4,8 @@ def _get_column_width(items, headers):
     for header in headers:
         max_width = len(header)
         for item in items:
-            max_width = max(max_width, len('{}'.format(item[header])))
+            if header in item:
+                max_width = max(max_width, len('{}'.format(item[header])))
 
         widths[header] = max_width
 
@@ -29,5 +30,8 @@ def print_table(items, headers, right_aligned_headers):
 
     for item in items:
         for header in headers:
-            _print_cell(item[header], column_widths[header], header in right_aligned_headers)
+            if header in item:
+                _print_cell(item[header], column_widths[header], header in right_aligned_headers)
+            else:
+                _print_cell("", column_widths[header], header in right_aligned_headers)
         print()
