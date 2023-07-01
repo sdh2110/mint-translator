@@ -4,6 +4,11 @@
 
 Converts CSV exports of transactions from Mint into the format used by my personal finances spreadsheet.
 
+## Intitial Setup
+
+- Clone this repo.
+- Run `pip install -r .\translator\requirements.txt` from the root directory of the project.
+
 ## Using the Translator Tool
 
 ### Standard Use
