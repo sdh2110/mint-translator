@@ -105,7 +105,7 @@ def error_out_transaction(transaction, error_message):
 
 
 def format_date(mint_date):
-    return datetime.strptime(mint_date, MINT_DATE_FORMAT).strftime(NEW_DATE_FORMAT)
+    return datetime.strptime(mint_date, MINT_DATE_FORMAT).strftime(NEW_DATE_FORMAT).lstrip('0').replace('/0', '/')
 
 
 def translate_from_mint(mint_transaction, index):
@@ -255,7 +255,7 @@ def sort_transactions(transactions, raw_transactions):
     errored_transactions = []
     raw_errored_transactions = []
 
-    for transaction in transactions:
+    for transaction in reversed(transactions):
         if does_transaction_match_pattern(transaction, DROP_PATTERNS):
             dropped_transactions.append(transaction)
         elif ERROR not in transaction:
