@@ -44,7 +44,8 @@ WARNING_PATTERNS = []
 
 PATTERN_HEADERS = [AMOUNT, DATE, FOR_OR_FROM, MONETARY_METHOD, OTHER_INFO, ERROR]
 
-DATE_FORMAT = '%m/%d/%Y'
+MINT_DATE_FORMAT = '%m/%d/%Y'
+NEW_DATE_FORMAT = '%m/%d/%y'
 TRANSFER_RANGE = None  # Transfers can only be merged if they are within this amount
 
 
@@ -103,11 +104,15 @@ def error_out_transaction(transaction, error_message):
         transaction[ERROR] += ' | ' + error_message
 
 
+def format_date(mint_date):
+    return datetime.strptime(mint_date, MINT_DATE_FORMAT).strftime(NEW_DATE_FORMAT)
+
+
 def translate_from_mint(mint_transaction, index):
     transaction = dict()
 
     # Set simple fields
-    transaction[DATE] = mint_transaction[MINT_DATE]
+    transaction[DATE] = format_date(mint_transaction[MINT_DATE])
     transaction[OTHER_INFO] = mint_transaction[MINT_NOTES]
     transaction[ORIGINAL_INDEX] = index
 
@@ -151,8 +156,8 @@ def translate_all_from_mint(raw_transactions):
 
 def are_two_transfers_paired(transfer1, transfer2):
     if float(transfer1[AMOUNT]) + float(transfer2[AMOUNT]) == 0:
-        date1 = datetime.strptime(transfer1[DATE], DATE_FORMAT)
-        date2 = datetime.strptime(transfer2[DATE], DATE_FORMAT)
+        date1 = datetime.strptime(transfer1[DATE], NEW_DATE_FORMAT)
+        date2 = datetime.strptime(transfer2[DATE], NEW_DATE_FORMAT)
         return abs((date2 - date1).days) <= TRANSFER_RANGE
     else:
         return False
